@@ -4,10 +4,165 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  domain    String?
+  createdAt DateTime @default(now())
+
+  users     User[]
+  cycles    EvaluationCycle[]
+}
+
+model User {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  email     String   @unique
+  password  String
+  role      Role
+  managerId String?
+
+  createdAt DateTime @default(now())
+
+  company   Company @relation(fields: [tenantId], references: [id])
+}
+
+enum Role {
+  ADMIN
+  HR
+  MANAGER
+  EMPLOYEE
+}
+
+model EvaluationCycle {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  status    CycleStatus
+
+  createdAt DateTime @default(now())
+
+  company   Company @relation(fields: [tenantId], references: [id])
+  evaluations Evaluation[]
+}
+
+enum CycleStatus {
+  DRAFT
+  RUNNING
+  CALIBRATION
+  CLOSED
+}
+
+model Evaluation {
+  id        String   @id @default(uuid())
+  tenantId  String
+
+  employeeId String
+  managerId  String
+
+  cycleId   String
+  status    EvaluationStatus
+
+  selfScore        Float?
+  managerScore     Float?
+  preliminaryScore Float?
+  finalScore       Float?
+
+  createdAt DateTime @default(now())
+
+  cycle EvaluationCycle @relation(fields: [cycleId], references: [id])
+
+  answers Answer[]
+  calibrations Calibration[]
+}
+
+enum EvaluationStatus {
+  PENDING_SELF_REVIEW
+  PENDING_MANAGER_REVIEW
+  AWAITING_CALIBRATION
+  CALIBRATING
+  CLOSED
+}
+
+model Question {
+  id        String @id @default(uuid())
+  tenantId  String
+
+  text      String
+  weight    Float
+
+  createdAt DateTime @default(now())
+
+  answers Answer[]
+}
+
+model Answer {
+  id           String @id @default(uuid())
+  evaluationId String
+  questionId   String
+
+  score        Float?
+  textAnswer   String?
+
+  createdAt DateTime @default(now())
+
+  evaluation Evaluation @relation(fields: [evaluationId], references: [id])
+  question   Question   @relation(fields: [questionId], references: [id])
+}
+
+model Feedback {
+  id        String @id @default(uuid())
+  tenantId  String
+
+  fromUserId String
+  toUserId   String
+
+  message   String
+
+  createdAt DateTime @default(now())
+}
+
+model Calibration {
+  id           String @id @default(uuid())
+  evaluationId String
+  reviewerId   String
+
+  decision CalibrationDecision
+  comment  String?
+
+  createdAt DateTime @default(now())
+
+  evaluation Evaluation @relation(fields: [evaluationId], references: [id])
+}
+
+enum CalibrationDecision {
+  AGREE
+  DISAGREE
+  ADJUST
+}
+
+model AuditLog {
+  id        String @id @default(uuid())
+  tenantId  String
+
+  actorId   String
+  entity    String
+  entityId  String
+  action    String
+
+  before    Json?
+  after     Json?
+
+  createdAt DateTime @default(now())
 }
