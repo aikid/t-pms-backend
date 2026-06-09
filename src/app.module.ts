@@ -6,20 +6,23 @@ import { DatabaseModule } from './infrastructure/database/database.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './infrastructure/database/prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { JwtModule } from '@nestjs/jwt';
 import { CompanyModule } from './modules/company/company.module';
+import { CyclesModule } from './modules/cycles/cycles.module';
+import { EvaluationsModule } from './modules/evaluations/evaluations.module';
+import { CalibrationsModule } from './modules/calibrations/calibrations.module';
+import { SharedModule } from './shared/shared.module';
 
 @Module({
   imports: [
-    DatabaseModule, 
-    UsersModule, 
-    PrismaModule, 
+    SharedModule,
+    DatabaseModule,
+    UsersModule,
+    PrismaModule,
     AuthModule,
-    JwtModule.register({
-      secret: 'super_secret',
-      signOptions: { expiresIn: '1d' },
-    }),
     CompanyModule,
+    CyclesModule,
+    EvaluationsModule,
+    CalibrationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

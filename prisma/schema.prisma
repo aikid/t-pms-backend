@@ -18,8 +18,22 @@ model Company {
   domain    String?
   createdAt DateTime @default(now())
 
-  users     User[]
-  cycles    EvaluationCycle[]
+  users      User[]
+  cycles     EvaluationCycle[]
+  parameters CompanyParameter[]
+}
+
+model CompanyParameter {
+  id        String   @id @default(uuid())
+  companyId String
+  key       String
+  value     String   @default("true")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company   Company  @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, key])
 }
 
 model User {
@@ -30,14 +44,22 @@ model User {
   password  String
   position  String
   role      Role
-  area  String
-  managerId String?
+  area      String
+  managerId    String?
   managerEmail String?
-  isSuperAdmin Boolean @default(false)
+  isSuperAdmin Boolean  @default(false)
+  isManager    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  createdAt DateTime @default(now())
-
-  company   Company @relation(fields: [tenantId], references: [id])
+  company               Company       @relation(fields: [tenantId], references: [id])
+  manager               User?         @relation("ManagedById", fields: [managerId], references: [id])
+  subordinates          User[]        @relation("ManagedById")
+  evaluationsAsEmployee Evaluation[]  @relation("EvaluationEmployee")
+  evaluationsAsManager  Evaluation[]  @relation("EvaluationManager")
+  calibrationsReviewed  Calibration[] @relation("CalibrationReviewer")
+  feedbacksSent         Feedback[]    @relation("FeedbackFrom")
+  feedbacksReceived     Feedback[]    @relation("FeedbackTo")
 }
 
 enum Role {
@@ -53,12 +75,25 @@ model EvaluationCycle {
   name      String
   startDate DateTime
   endDate   DateTime
+  startEmployeeDate    DateTime
+  endEmployeeDate      DateTime
+  managerAditionalDays Int
+  target    TargetCycle
   status    CycleStatus
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  company   Company @relation(fields: [tenantId], references: [id])
+  company     Company          @relation(fields: [tenantId], references: [id])
   evaluations Evaluation[]
+  questions   Question[]
+  scale       EvaluationScale[]
+}
+
+enum TargetCycle {
+  ALL
+  MANAGERS
+  CUSTOM
 }
 
 enum CycleStatus {
@@ -68,15 +103,25 @@ enum CycleStatus {
   CLOSED
 }
 
-model Evaluation {
-  id        String   @id @default(uuid())
-  tenantId  String
+model EvaluationScale {
+  id          String  @id @default(uuid())
+  cycleId     String
+  level       Int
+  title       String
+  description String
 
+  cycle EvaluationCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+
+  @@unique([cycleId, level])
+}
+
+model Evaluation {
+  id         String   @id @default(uuid())
+  tenantId   String
+  cycleId    String
   employeeId String
   managerId  String
-
-  cycleId   String
-  status    EvaluationStatus
+  status     EvaluationStatus
 
   selfScore        Float?
   managerScore     Float?
@@ -84,10 +129,12 @@ model Evaluation {
   finalScore       Float?
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  cycle EvaluationCycle @relation(fields: [cycleId], references: [id])
-
-  answers Answer[]
+  cycle        EvaluationCycle @relation(fields: [cycleId], references: [id])
+  employee     User            @relation("EvaluationEmployee", fields: [employeeId], references: [id])
+  manager      User            @relation("EvaluationManager", fields: [managerId], references: [id])
+  answers      Answer[]
   calibrations Calibration[]
 }
 
@@ -100,60 +147,90 @@ enum EvaluationStatus {
 }
 
 model Question {
-  id        String @id @default(uuid())
-  tenantId  String
-
-  text      String
-  weight    Float
+  id          String           @id @default(uuid())
+  tenantId    String
+  cycleId     String
+  title       String
+  description String?
+  category    QuestionCategory
+  weight      Float
+  status      QuestionStatus   @default(DRAFT)
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  cycle   EvaluationCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
   answers Answer[]
 }
 
+enum QuestionCategory {
+  PERFORMANCE
+  CULTURE
+  CAREER
+  RESULT
+}
+
+enum QuestionStatus {
+  DRAFT
+  PUBLISHED
+}
+
 model Answer {
-  id           String @id @default(uuid())
+  id           String     @id @default(uuid())
   evaluationId String
   questionId   String
-
+  type         AnswerType
   score        Float?
   textAnswer   String?
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  evaluation Evaluation @relation(fields: [evaluationId], references: [id])
+  evaluation Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
   question   Question   @relation(fields: [questionId], references: [id])
+
+  @@unique([evaluationId, questionId, type])
+}
+
+enum AnswerType {
+  SELF
+  MANAGER
 }
 
 model Feedback {
-  id        String @id @default(uuid())
-  tenantId  String
-
+  id         String @id @default(uuid())
+  tenantId   String
   fromUserId String
   toUserId   String
-
-  message   String
+  message    String
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fromUser User @relation("FeedbackFrom", fields: [fromUserId], references: [id])
+  toUser   User @relation("FeedbackTo", fields: [toUserId], references: [id])
 }
 
 model Calibration {
-  id           String @id @default(uuid())
-  evaluationId String
-  reviewerId   String
-
-  decision CalibrationDecision
-  comment  String?
+  id              String  @id @default(uuid())
+  evaluationId    String
+  reviewerId      String
+  calibratedScore Float?
+  decision        CalibrationDecision
+  comment         String?
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  evaluation Evaluation @relation(fields: [evaluationId], references: [id])
+  evaluation Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  reviewer   User       @relation("CalibrationReviewer", fields: [reviewerId], references: [id])
 }
 
 enum CalibrationDecision {
   AGREE
   DISAGREE
   ADJUST
+  PENDING
 }
 
 model AuditLog {

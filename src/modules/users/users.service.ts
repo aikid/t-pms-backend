@@ -16,7 +16,25 @@ export class UsersService {
 
   async findAll() {
     const tenantId = tenantContext.getStore()?.tenantId;
-    return this.prisma.user.findMany({ where: { tenantId } });
+    return this.prisma.user.findMany({
+      where: { tenantId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        position: true,
+        role: true,
+        area: true,
+        isManager: true,
+        isSuperAdmin: true,
+        managerId: true,
+        managerEmail: true,
+        createdAt: true,
+        manager: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
   }
 
 }
