@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { tenantContext } from 'src/shared/context/tenant.context';
-import { CycleStatus, QuestionCategory, QuestionStatus, TargetCycle } from '@prisma/client';
+import { CycleStatus, EvaluationStatus, QuestionCategory, QuestionRespondent, QuestionStatus, TargetCycle } from '@prisma/client';
 
 export class CreateCycleDto {
   name: string;
@@ -9,7 +9,11 @@ export class CreateCycleDto {
   endDate: string;
   startEmployeeDate: string;
   endEmployeeDate: string;
-  managerAditionalDays: number;
+  managerAditionalDays?: number;
+  startManagerDate?: string;
+  endManagerDate?: string;
+  startCalibrationDate?: string;
+  endCalibrationDate?: string;
   target: TargetCycle;
 }
 
@@ -17,6 +21,7 @@ export class CreateQuestionDto {
   title: string;
   description?: string;
   category: QuestionCategory;
+  respondent?: QuestionRespondent;
   weight: number;
   status?: QuestionStatus;
 }
@@ -74,6 +79,11 @@ export class CyclesService {
         endDate: new Date(data.endDate),
         startEmployeeDate: new Date(data.startEmployeeDate),
         endEmployeeDate: new Date(data.endEmployeeDate),
+        ...(data.startManagerDate && { startManagerDate: new Date(data.startManagerDate) }),
+        ...(data.endManagerDate && { endManagerDate: new Date(data.endManagerDate) }),
+        ...(data.startCalibrationDate && { startCalibrationDate: new Date(data.startCalibrationDate) }),
+        ...(data.endCalibrationDate && { endCalibrationDate: new Date(data.endCalibrationDate) }),
+        managerAditionalDays: data.managerAditionalDays ?? 0,
         status: CycleStatus.DRAFT,
       },
       include: {
@@ -94,6 +104,10 @@ export class CyclesService {
         ...(data.endDate && { endDate: new Date(data.endDate) }),
         ...(data.startEmployeeDate && { startEmployeeDate: new Date(data.startEmployeeDate) }),
         ...(data.endEmployeeDate && { endEmployeeDate: new Date(data.endEmployeeDate) }),
+        ...(data.startManagerDate && { startManagerDate: new Date(data.startManagerDate) }),
+        ...(data.endManagerDate && { endManagerDate: new Date(data.endManagerDate) }),
+        ...(data.startCalibrationDate && { startCalibrationDate: new Date(data.startCalibrationDate) }),
+        ...(data.endCalibrationDate && { endCalibrationDate: new Date(data.endCalibrationDate) }),
       },
       include: {
         questions: { orderBy: { createdAt: 'asc' } },
@@ -150,5 +164,63 @@ export class CyclesService {
       }),
     );
     return this.prisma.$transaction(ops);
+  }
+
+  // ── Launch: transition to RUNNING + generate evaluations ─────────────────
+
+  async launch(cycleId: string) {
+    const tenantId = this.getTenantId();
+
+    const cycle = await this.prisma.evaluationCycle.findFirstOrThrow({
+      where: { id: cycleId, tenantId },
+    });
+
+    if (cycle.status !== CycleStatus.DRAFT) {
+      throw new BadRequestException('Apenas ciclos em rascunho podem ser publicados');
+    }
+
+    // Determine which employees to include
+    const employees = await this.prisma.user.findMany({
+      where: {
+        tenantId,
+        role: { not: 'ADMIN' },
+        // MANAGERS target: only users that are managers
+        ...(cycle.target === 'MANAGERS' ? { isManager: true } : {}),
+      },
+      select: { id: true, managerId: true },
+    });
+
+    // Avoid duplicates — skip employees that already have an evaluation for this cycle
+    const existing = await this.prisma.evaluation.findMany({
+      where: { cycleId, tenantId },
+      select: { employeeId: true },
+    });
+    const existingIds = new Set(existing.map((e) => e.employeeId));
+
+    const toCreate = employees.filter(
+      (e) => !existingIds.has(e.id) && e.managerId !== null,
+    );
+
+    await this.prisma.$transaction([
+      // Update cycle status
+      this.prisma.evaluationCycle.update({
+        where: { id: cycleId },
+        data: { status: CycleStatus.RUNNING },
+      }),
+      // Create one evaluation record per employee
+      ...toCreate.map((e) =>
+        this.prisma.evaluation.create({
+          data: {
+            cycleId,
+            tenantId,
+            employeeId: e.id,
+            managerId: e.managerId!,
+            status: EvaluationStatus.PENDING_SELF_REVIEW,
+          },
+        }),
+      ),
+    ]);
+
+    return this.findOne(cycleId);
   }
 }

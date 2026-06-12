@@ -40,6 +40,34 @@ export class EvaluationsService {
     });
   }
 
+  async findMine(userId: string) {
+    const tenantId = this.getTenantId();
+    return this.prisma.evaluation.findMany({
+      where: { tenantId, employeeId: userId },
+      include: {
+        employee: { select: { id: true, name: true, position: true, area: true } },
+        manager: { select: { id: true, name: true } },
+        answers: { include: { question: true } },
+        cycle: { include: { questions: { orderBy: { createdAt: 'asc' } }, scale: { orderBy: { level: 'asc' } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findAsManager(managerId: string, cycleId?: string) {
+    const tenantId = this.getTenantId();
+    return this.prisma.evaluation.findMany({
+      where: { tenantId, managerId, ...(cycleId && { cycleId }) },
+      include: {
+        employee: { select: { id: true, name: true, position: true, area: true } },
+        manager: { select: { id: true, name: true } },
+        answers: true,
+        cycle: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async findOne(id: string) {
     const tenantId = this.getTenantId();
     return this.prisma.evaluation.findFirstOrThrow({

@@ -1,16 +1,19 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { Tenant } from '../../shared/decorators/tenant.decorator';
+import { JwtAuthGuard } from 'src/shared/guards/jwt/jwt.guard';
+import { RolesGuard } from 'src/shared/guards/roles/roles.guard';
+import { Roles } from 'src/shared/decorators/roles.decorator';
+import { Role } from '@prisma/client';
 
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.ADMIN)
 @Controller('users')
 export class UsersController {
 
   constructor(private service: UsersService) {}
 
   @Post()
-  create(
-    @Body() body: any,
-  ) {
+  create(@Body() body: any) {
     return this.service.create(body);
   }
 

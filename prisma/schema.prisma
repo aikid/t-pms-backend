@@ -77,7 +77,11 @@ model EvaluationCycle {
   endDate   DateTime
   startEmployeeDate    DateTime
   endEmployeeDate      DateTime
-  managerAditionalDays Int
+  managerAditionalDays Int      @default(0)
+  startManagerDate     DateTime?
+  endManagerDate       DateTime?
+  startCalibrationDate DateTime?
+  endCalibrationDate   DateTime?
   target    TargetCycle
   status    CycleStatus
 
@@ -153,6 +157,7 @@ model Question {
   title       String
   description String?
   category    QuestionCategory
+  respondent  QuestionRespondent @default(BOTH)
   weight      Float
   status      QuestionStatus   @default(DRAFT)
 
@@ -161,6 +166,12 @@ model Question {
 
   cycle   EvaluationCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
   answers Answer[]
+}
+
+enum QuestionRespondent {
+  EMPLOYEE
+  MANAGER
+  BOTH
 }
 
 enum QuestionCategory {

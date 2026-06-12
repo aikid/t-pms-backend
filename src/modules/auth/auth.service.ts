@@ -35,7 +35,8 @@ export class AuthService {
       tenantId: user.tenantId,
       tenantName: user.company.name,
       role: user.role,
-      isSuperAdmin: user.isSuperAdmin
+      isSuperAdmin: user.isSuperAdmin,
+      isManager: user.isManager,
     });
 
     return { access_token: token };
