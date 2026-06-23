@@ -37,6 +37,7 @@ export class AuthService {
       role: user.role,
       isSuperAdmin: user.isSuperAdmin,
       isManager: user.isManager,
+      area: user.area ?? null,
     });
 
     return { access_token: token };
