@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
-import { CalibrationsService, SubmitCalibrationDto } from './calibrations.service';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { CalibrationsService, SaveCalibrationConfigDto, SubmitCalibrationDto } from './calibrations.service';
 import { JwtAuthGuard } from 'src/shared/guards/jwt/jwt.guard';
 import { RolesGuard } from 'src/shared/guards/roles/roles.guard';
 import { Roles } from 'src/shared/decorators/roles.decorator';
 import { CurrentUser } from 'src/shared/decorators/current-user.decorator';
+import { Role } from '@prisma/client';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('calibrations')
@@ -28,8 +29,28 @@ export class CalibrationsController {
   @Post()
   submitCalibration(
     @Body() body: SubmitCalibrationDto,
-    @CurrentUser() user: { id: string },
+    @CurrentUser() user: { userId: string },
   ) {
-    return this.service.submitCalibration(body, user.id);
+    return this.service.submitCalibration(body, user.userId);
+  }
+
+  // ── Config endpoints ───────────────────────────────────────────────────────
+
+  @Get('config')
+  @Roles(Role.ADMIN, Role.MANAGER)
+  getConfig(@Query('cycleId') cycleId: string) {
+    return this.service.getConfig(cycleId);
+  }
+
+  @Post('config')
+  @Roles(Role.ADMIN)
+  saveConfig(@Body() body: SaveCalibrationConfigDto) {
+    return this.service.saveConfig(body);
+  }
+
+  @Post('config/:cycleId/publish')
+  @Roles(Role.ADMIN)
+  publishConfig(@Param('cycleId') cycleId: string) {
+    return this.service.publishConfig(cycleId);
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { tenantContext } from 'src/shared/context/tenant.context';
 import { CalibrationDecision, EvaluationStatus } from '@prisma/client';
@@ -8,6 +8,14 @@ export class SubmitCalibrationDto {
   calibratedScore: number;
   decision: CalibrationDecision;
   comment?: string;
+}
+
+export class SaveCalibrationConfigDto {
+  cycleId: string;
+  model: string;
+  calibrableField: string;
+  roomFormation: string;
+  configData?: Record<string, any>;
 }
 
 @Injectable()
@@ -153,5 +161,70 @@ export class CalibrationsService {
     }
 
     return calibration;
+  }
+
+  // ── Calibration Config ────────────────────────────────────────────────────
+
+  async getConfig(cycleId: string) {
+    const tenantId = this.getTenantId();
+    return this.prisma.calibrationConfig.findUnique({
+      where: { cycleId },
+    });
+  }
+
+  async saveConfig(dto: SaveCalibrationConfigDto) {
+    const tenantId = this.getTenantId();
+
+    const existing = await this.prisma.calibrationConfig.findUnique({
+      where: { cycleId: dto.cycleId },
+    });
+
+    if (existing?.isPublished) {
+      throw new BadRequestException('Configuração de calibração já publicada e não pode ser alterada.');
+    }
+
+    return this.prisma.calibrationConfig.upsert({
+      where: { cycleId: dto.cycleId },
+      create: {
+        cycleId: dto.cycleId,
+        tenantId,
+        model: dto.model,
+        calibrableField: dto.calibrableField,
+        roomFormation: dto.roomFormation,
+        ...(dto.configData !== undefined && { configData: dto.configData }),
+      },
+      update: {
+        model: dto.model,
+        calibrableField: dto.calibrableField,
+        roomFormation: dto.roomFormation,
+        ...(dto.configData !== undefined && { configData: dto.configData }),
+      },
+    });
+  }
+
+  async publishConfig(cycleId: string) {
+    const tenantId = this.getTenantId();
+
+    const existing = await this.prisma.calibrationConfig.findUnique({
+      where: { cycleId },
+    });
+
+    if (existing?.isPublished) {
+      throw new BadRequestException('Configuração já foi publicada.');
+    }
+
+    return this.prisma.calibrationConfig.upsert({
+      where: { cycleId },
+      create: {
+        cycleId,
+        tenantId,
+        isPublished: true,
+        publishedAt: new Date(),
+      },
+      update: {
+        isPublished: true,
+        publishedAt: new Date(),
+      },
+    });
   }
 }

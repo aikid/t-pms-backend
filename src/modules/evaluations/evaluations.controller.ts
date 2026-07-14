@@ -61,8 +61,9 @@ export class EvaluationsController {
   submitAnswers(
     @Param('id') id: string,
     @Body() body: { answers: SubmitAnswerDto[] },
-    @CurrentUser() user: { userId: string },
+    @CurrentUser() user: { userId: string; role: string; isSuperAdmin: boolean },
   ) {
-    return this.service.submitAnswers(id, body.answers, user.userId);
+    const isAdmin = user.isSuperAdmin || user.role === 'ADMIN';
+    return this.service.submitAnswers(id, body.answers, user.userId, isAdmin);
   }
 }

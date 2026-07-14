@@ -61,8 +61,8 @@ export class EvaluationsService {
       include: {
         employee: { select: { id: true, name: true, position: true, area: true } },
         manager: { select: { id: true, name: true } },
-        answers: true,
-        cycle: { select: { id: true, name: true } },
+        answers: { include: { question: true } },
+        cycle: { include: { questions: { orderBy: { createdAt: 'asc' } }, scale: { orderBy: { level: 'asc' } } } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -93,7 +93,7 @@ export class EvaluationsService {
     });
   }
 
-  async submitAnswers(evaluationId: string, answers: SubmitAnswerDto[], userId: string) {
+  async submitAnswers(evaluationId: string, answers: SubmitAnswerDto[], userId: string, isAdmin = false) {
     const tenantId = this.getTenantId();
     const evaluation = await this.prisma.evaluation.findFirstOrThrow({
       where: { id: evaluationId, tenantId },
@@ -102,10 +102,11 @@ export class EvaluationsService {
     const isSelf = evaluation.employeeId === userId;
     const isManager = evaluation.managerId === userId;
 
-    if (!isSelf && !isManager) {
+    if (!isSelf && !isManager && !isAdmin) {
       throw new ForbiddenException('Sem permissão para responder esta avaliação');
     }
 
+    // Admins submitting for someone else act as the manager
     const answerType: AnswerType = isSelf ? AnswerType.SELF : AnswerType.MANAGER;
 
     // Upsert each answer
@@ -142,7 +143,7 @@ export class EvaluationsService {
     let nextStatus = evaluation.status;
     if (isSelf && evaluation.status === EvaluationStatus.PENDING_SELF_REVIEW) {
       nextStatus = EvaluationStatus.PENDING_MANAGER_REVIEW;
-    } else if (isManager && evaluation.status === EvaluationStatus.PENDING_MANAGER_REVIEW) {
+    } else if (!isSelf && evaluation.status === EvaluationStatus.PENDING_MANAGER_REVIEW) {
       nextStatus = EvaluationStatus.AWAITING_CALIBRATION;
     }
 

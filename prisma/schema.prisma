@@ -92,6 +92,7 @@ model EvaluationCycle {
   evaluations Evaluation[]
   questions   Question[]
   scale       EvaluationScale[]
+  calibrationConfig CalibrationConfig?
 }
 
 enum TargetCycle {
@@ -235,6 +236,23 @@ model Calibration {
 
   evaluation Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
   reviewer   User       @relation("CalibrationReviewer", fields: [reviewerId], references: [id])
+}
+
+model CalibrationConfig {
+  id              String  @id @default(uuid())
+  cycleId         String  @unique
+  tenantId        String
+  model           String  @default("HYBRID")
+  calibrableField String  @default("PERFORMANCE")
+  roomFormation   String  @default("RULE")
+  configData      Json?
+  isPublished     Boolean @default(false)
+  publishedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cycle EvaluationCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
 }
 
 enum CalibrationDecision {
