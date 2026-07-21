@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { tenantContext } from 'src/shared/context/tenant.context';
 import { CalibrationDecision, EvaluationStatus } from '@prisma/client';
@@ -18,6 +18,20 @@ export class SaveCalibrationConfigDto {
   configData?: Record<string, any>;
 }
 
+export class CreateRoomDto {
+  cycleId: string;
+  name: string;
+}
+
+export class AddParticipantDto {
+  userId: string;
+  role?: string;
+}
+
+export class MoveEvaluationDto {
+  targetRoomId: string;
+}
+
 @Injectable()
 export class CalibrationsService {
   constructor(private prisma: PrismaService) {}
@@ -33,7 +47,7 @@ export class CalibrationsService {
     const evaluations = await this.prisma.evaluation.findMany({
       where: { tenantId, cycleId },
       include: {
-        employee: { select: { id: true, name: true, area: true } },
+        employee: { select: { id: true, name: true, area: true, level: true } },
         manager: { select: { id: true, name: true } },
         calibrations: {
           include: { reviewer: { select: { id: true, name: true } } },
@@ -226,5 +240,145 @@ export class CalibrationsService {
         publishedAt: new Date(),
       },
     });
+  }
+
+  // ── Calibration Rooms ─────────────────────────────────────────────────────
+
+  private roomInclude = {
+    evaluations: {
+      include: {
+        evaluation: {
+          include: {
+            employee: { select: { id: true, name: true, position: true, area: true, level: true } },
+            manager: { select: { id: true, name: true } },
+          },
+        },
+      },
+    },
+    participants: {
+      include: { user: { select: { id: true, name: true, position: true } } },
+    },
+  };
+
+  async listRooms(cycleId: string) {
+    const tenantId = this.getTenantId();
+    return this.prisma.calibrationRoom.findMany({
+      where: { cycleId, tenantId },
+      include: this.roomInclude,
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  async createRoom(dto: CreateRoomDto) {
+    const tenantId = this.getTenantId();
+    return this.prisma.calibrationRoom.create({
+      data: { cycleId: dto.cycleId, tenantId, name: dto.name },
+      include: this.roomInclude,
+    });
+  }
+
+  async deleteRoom(roomId: string) {
+    const tenantId = this.getTenantId();
+    await this.prisma.calibrationRoom.deleteMany({ where: { id: roomId, tenantId } });
+  }
+
+  /** Auto-creates rooms from cycle evaluations.
+   *  RULE    → groups by area + level  (e.g. "DEV - Sênior", "DEV - Pleno")
+   *  COLUMNS → groups by area only     (e.g. "DEV", "RH")
+   *  Deletes all existing rooms for the cycle before recreating, then auto-adds managers as participants.
+   */
+  async seedRooms(cycleId: string) {
+    const tenantId = this.getTenantId();
+
+    const config = await this.prisma.calibrationConfig.findUnique({ where: { cycleId } });
+    const byAreaAndLevel = config?.roomFormation === 'RULE';
+
+    // Delete all existing rooms (and their evaluations/participants via cascade) before recreating
+    await this.prisma.calibrationRoom.deleteMany({ where: { cycleId, tenantId } });
+
+    const evaluations = await this.prisma.evaluation.findMany({
+      where: { tenantId, cycleId },
+      include: { employee: { select: { area: true, level: true } } },
+    });
+
+    const groupMap: Record<string, string[]> = {};
+    for (const ev of evaluations) {
+      const area = ev.employee.area || 'Sem área';
+      const level = ev.employee.level;
+      const key = byAreaAndLevel && level
+        ? `${area} - ${level}`
+        : area;
+      if (!groupMap[key]) groupMap[key] = [];
+      groupMap[key].push(ev.id);
+    }
+
+    for (const [name, evalIds] of Object.entries(groupMap)) {
+      const room = await this.prisma.calibrationRoom.create({
+        data: { cycleId, tenantId, name },
+      });
+
+      for (const evaluationId of evalIds) {
+        await this.prisma.calibrationRoomEvaluation.create({
+          data: { roomId: room.id, evaluationId },
+        });
+      }
+
+      // Auto-add unique managers of this room's evaluations as participants
+      const roomEvals = evaluations.filter((ev) => evalIds.includes(ev.id));
+      const managerIds = [...new Set(roomEvals.map((ev) => ev.managerId).filter(Boolean))];
+      for (const userId of managerIds) {
+        await this.prisma.calibrationRoomParticipant.create({
+          data: { roomId: room.id, userId, role: 'MANAGER_RESPONSIBLE' },
+        });
+      }
+    }
+
+    return this.listRooms(cycleId);
+  }
+
+  async addEvaluationToRoom(roomId: string, evaluationId: string) {
+    const tenantId = this.getTenantId();
+    const room = await this.prisma.calibrationRoom.findFirst({ where: { id: roomId, tenantId } });
+    if (!room) throw new NotFoundException('Sala não encontrada');
+
+    await this.prisma.calibrationRoomEvaluation.upsert({
+      where: { evaluationId },
+      create: { roomId, evaluationId },
+      update: { roomId },
+    });
+  }
+
+  async removeEvaluationFromRoom(roomId: string, evaluationId: string) {
+    await this.prisma.calibrationRoomEvaluation.deleteMany({
+      where: { roomId, evaluationId },
+    });
+  }
+
+  async moveEvaluation(roomId: string, evaluationId: string, targetRoomId: string) {
+    const tenantId = this.getTenantId();
+    const target = await this.prisma.calibrationRoom.findFirst({ where: { id: targetRoomId, tenantId } });
+    if (!target) throw new NotFoundException('Sala de destino não encontrada');
+
+    await this.prisma.calibrationRoomEvaluation.upsert({
+      where: { evaluationId },
+      create: { roomId: targetRoomId, evaluationId },
+      update: { roomId: targetRoomId },
+    });
+  }
+
+  async addParticipant(roomId: string, dto: AddParticipantDto) {
+    const tenantId = this.getTenantId();
+    const room = await this.prisma.calibrationRoom.findFirst({ where: { id: roomId, tenantId } });
+    if (!room) throw new NotFoundException('Sala não encontrada');
+
+    return this.prisma.calibrationRoomParticipant.upsert({
+      where: { roomId_userId: { roomId, userId: dto.userId } },
+      create: { roomId, userId: dto.userId, role: dto.role ?? 'REVIEWER' },
+      update: { role: dto.role ?? 'REVIEWER' },
+    });
+  }
+
+  async removeParticipant(roomId: string, userId: string) {
+    await this.prisma.calibrationRoomParticipant.deleteMany({ where: { roomId, userId } });
   }
 }

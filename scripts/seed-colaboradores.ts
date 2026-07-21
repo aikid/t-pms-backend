@@ -22,16 +22,16 @@ async function main() {
   const hash = await bcrypt.hash('senha123', 10);
 
   const colaboradores = [
-    { name: 'Ana Paula Ribeiro',   email: 'ana.ribeiro@empresa.com',    position: 'Analista de RH',          area: 'RH',         manager: manager1 },
-    { name: 'Bruno Carvalho',      email: 'bruno.carvalho@empresa.com',  position: 'Eng. Software Pleno',     area: 'DEV',        manager: manager1 },
-    { name: 'Camila Torres',       email: 'camila.torres@empresa.com',   position: 'Designer UX',             area: 'PRODUTO',    manager: manager1 },
-    { name: 'Diego Nascimento',    email: 'diego.nascimento@empresa.com',position: 'Analista Financeiro',     area: 'FINANCEIRO', manager: manager1 },
-    { name: 'Érica Monteiro',      email: 'erica.monteiro@empresa.com',  position: 'QA Engineer',             area: 'DEV',        manager: manager1 },
-    { name: 'Fábio Andrade',       email: 'fabio.andrade@empresa.com',   position: 'Backend Developer',       area: 'DEV',        manager: manager2 },
-    { name: 'Gabriela Sousa',      email: 'gabriela.sousa@empresa.com',  position: 'Product Manager',         area: 'PRODUTO',    manager: manager2 },
-    { name: 'Henrique Lima',       email: 'henrique.lima@empresa.com',   position: 'DevOps Engineer',         area: 'DEV',        manager: manager2 },
-    { name: 'Isabela Freitas',     email: 'isabela.freitas@empresa.com', position: 'Analista de Marketing',   area: 'MARKETING',  manager: manager2 },
-    { name: 'João Victor Pires',   email: 'joao.pires@empresa.com',      position: 'Eng. Software Jr.',       area: 'DEV',        manager: manager2 },
+    { name: 'Ana Paula Ribeiro',   email: 'ana.ribeiro@empresa.com',    position: 'Analista de RH',          area: 'RH',         level: 'Pleno',      manager: manager1 },
+    { name: 'Bruno Carvalho',      email: 'bruno.carvalho@empresa.com',  position: 'Eng. Software Pleno',     area: 'DEV',        level: 'Pleno',      manager: manager1 },
+    { name: 'Camila Torres',       email: 'camila.torres@empresa.com',   position: 'Designer UX',             area: 'PRODUTO',    level: 'Júnior',     manager: manager1 },
+    { name: 'Diego Nascimento',    email: 'diego.nascimento@empresa.com',position: 'Analista Financeiro',     area: 'FINANCEIRO', level: 'Sênior',     manager: manager1 },
+    { name: 'Érica Monteiro',      email: 'erica.monteiro@empresa.com',  position: 'QA Engineer',             area: 'DEV',        level: 'Júnior',     manager: manager1 },
+    { name: 'Fábio Andrade',       email: 'fabio.andrade@empresa.com',   position: 'Backend Developer',       area: 'DEV',        level: 'Sênior',     manager: manager2 },
+    { name: 'Gabriela Sousa',      email: 'gabriela.sousa@empresa.com',  position: 'Product Manager',         area: 'PRODUTO',    level: 'Sênior',     manager: manager2 },
+    { name: 'Henrique Lima',       email: 'henrique.lima@empresa.com',   position: 'DevOps Engineer',         area: 'DEV',        level: 'Pleno',      manager: manager2 },
+    { name: 'Isabela Freitas',     email: 'isabela.freitas@empresa.com', position: 'Analista de Marketing',   area: 'MARKETING',  level: 'Júnior',     manager: manager2 },
+    { name: 'João Victor Pires',   email: 'joao.pires@empresa.com',      position: 'Eng. Software Jr.',       area: 'DEV',        level: 'Júnior',     manager: manager2 },
   ];
 
   let created = 0;
@@ -51,6 +51,7 @@ async function main() {
         email: c.email,
         position: c.position,
         area: c.area,
+        level: c.level,
         tenantId: TENANT_ID,
         password: hash,
         role: 'EMPLOYEE',

@@ -1,5 +1,12 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
-import { CalibrationsService, SaveCalibrationConfigDto, SubmitCalibrationDto } from './calibrations.service';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  AddParticipantDto,
+  CalibrationsService,
+  CreateRoomDto,
+  MoveEvaluationDto,
+  SaveCalibrationConfigDto,
+  SubmitCalibrationDto,
+} from './calibrations.service';
 import { JwtAuthGuard } from 'src/shared/guards/jwt/jwt.guard';
 import { RolesGuard } from 'src/shared/guards/roles/roles.guard';
 import { Roles } from 'src/shared/decorators/roles.decorator';
@@ -52,5 +59,79 @@ export class CalibrationsController {
   @Roles(Role.ADMIN)
   publishConfig(@Param('cycleId') cycleId: string) {
     return this.service.publishConfig(cycleId);
+  }
+
+  // ── Room endpoints ─────────────────────────────────────────────────────────
+
+  @Get('rooms')
+  @Roles(Role.ADMIN, Role.MANAGER, Role.HR)
+  listRooms(@Query('cycleId') cycleId: string) {
+    return this.service.listRooms(cycleId);
+  }
+
+  @Post('rooms')
+  @Roles(Role.ADMIN, Role.HR)
+  createRoom(@Body() body: CreateRoomDto) {
+    return this.service.createRoom(body);
+  }
+
+  @Delete('rooms/:id')
+  @HttpCode(204)
+  @Roles(Role.ADMIN, Role.HR)
+  deleteRoom(@Param('id') id: string) {
+    return this.service.deleteRoom(id);
+  }
+
+  @Post('rooms/seed')
+  @Roles(Role.ADMIN, Role.HR)
+  seedRooms(@Body('cycleId') cycleId: string) {
+    return this.service.seedRooms(cycleId);
+  }
+
+  @Post('rooms/:id/evaluations')
+  @HttpCode(204)
+  @Roles(Role.ADMIN, Role.HR)
+  addEvaluation(
+    @Param('id') roomId: string,
+    @Body('evaluationId') evaluationId: string,
+  ) {
+    return this.service.addEvaluationToRoom(roomId, evaluationId);
+  }
+
+  @Delete('rooms/:id/evaluations/:evaluationId')
+  @HttpCode(204)
+  @Roles(Role.ADMIN, Role.HR)
+  removeEvaluation(
+    @Param('id') roomId: string,
+    @Param('evaluationId') evaluationId: string,
+  ) {
+    return this.service.removeEvaluationFromRoom(roomId, evaluationId);
+  }
+
+  @Patch('rooms/:id/evaluations/:evaluationId/move')
+  @HttpCode(204)
+  @Roles(Role.ADMIN, Role.HR)
+  moveEvaluation(
+    @Param('id') roomId: string,
+    @Param('evaluationId') evaluationId: string,
+    @Body() body: MoveEvaluationDto,
+  ) {
+    return this.service.moveEvaluation(roomId, evaluationId, body.targetRoomId);
+  }
+
+  @Post('rooms/:id/participants')
+  @Roles(Role.ADMIN, Role.HR)
+  addParticipant(@Param('id') roomId: string, @Body() body: AddParticipantDto) {
+    return this.service.addParticipant(roomId, body);
+  }
+
+  @Delete('rooms/:id/participants/:userId')
+  @HttpCode(204)
+  @Roles(Role.ADMIN, Role.HR)
+  removeParticipant(
+    @Param('id') roomId: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.service.removeParticipant(roomId, userId);
   }
 }

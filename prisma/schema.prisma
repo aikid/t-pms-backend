@@ -43,6 +43,7 @@ model User {
   email     String   @unique
   password  String
   position  String
+  level     String?
   role      Role
   area      String
   managerId    String?
@@ -60,6 +61,7 @@ model User {
   calibrationsReviewed  Calibration[] @relation("CalibrationReviewer")
   feedbacksSent         Feedback[]    @relation("FeedbackFrom")
   feedbacksReceived     Feedback[]    @relation("FeedbackTo")
+  roomParticipations    CalibrationRoomParticipant[]
 }
 
 enum Role {
@@ -88,11 +90,12 @@ model EvaluationCycle {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  company     Company          @relation(fields: [tenantId], references: [id])
-  evaluations Evaluation[]
-  questions   Question[]
-  scale       EvaluationScale[]
+  company          Company           @relation(fields: [tenantId], references: [id])
+  evaluations      Evaluation[]
+  questions        Question[]
+  scale            EvaluationScale[]
   calibrationConfig CalibrationConfig?
+  calibrationRooms  CalibrationRoom[]
 }
 
 enum TargetCycle {
@@ -141,6 +144,7 @@ model Evaluation {
   manager      User            @relation("EvaluationManager", fields: [managerId], references: [id])
   answers      Answer[]
   calibrations Calibration[]
+  roomMemberships CalibrationRoomEvaluation[]
 }
 
 enum EvaluationStatus {
@@ -260,6 +264,44 @@ enum CalibrationDecision {
   DISAGREE
   ADJUST
   PENDING
+}
+
+model CalibrationRoom {
+  id       String @id @default(uuid())
+  cycleId  String
+  tenantId String
+  name     String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cycle        EvaluationCycle               @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  evaluations  CalibrationRoomEvaluation[]
+  participants CalibrationRoomParticipant[]
+
+  @@unique([cycleId, name])
+}
+
+model CalibrationRoomEvaluation {
+  roomId       String
+  evaluationId String
+
+  room       CalibrationRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  evaluation Evaluation      @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, evaluationId])
+  @@unique([evaluationId])
+}
+
+model CalibrationRoomParticipant {
+  roomId String
+  userId String
+  role   String @default("REVIEWER")
+
+  room CalibrationRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, userId])
 }
 
 model AuditLog {
