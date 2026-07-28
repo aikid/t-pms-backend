@@ -170,21 +170,28 @@ export class CalibrationsService {
 
     const isManager = evaluation?.managerId === reviewerId;
 
-    const calibration = await this.prisma.calibration.upsert({
-      where: { evaluationId_reviewerId: { evaluationId: dto.evaluationId, reviewerId } },
-      create: {
-        evaluationId: dto.evaluationId,
-        reviewerId,
-        calibratedScore: dto.calibratedScore,
-        decision: dto.decision,
-        comment: dto.comment,
-      },
-      update: {
-        calibratedScore: dto.calibratedScore,
-        decision: dto.decision,
-        comment: dto.comment,
-      },
+    const calibration = await this.prisma.calibration.findFirst({
+      where: { evaluationId: dto.evaluationId, reviewerId },
     });
+
+    const result = calibration
+      ? await this.prisma.calibration.update({
+          where: { id: calibration.id },
+          data: {
+            calibratedScore: dto.calibratedScore,
+            decision: dto.decision,
+            comment: dto.comment,
+          },
+        })
+      : await this.prisma.calibration.create({
+          data: {
+            evaluationId: dto.evaluationId,
+            reviewerId,
+            calibratedScore: dto.calibratedScore,
+            decision: dto.decision,
+            comment: dto.comment,
+          },
+        });
 
     // Only the direct manager can set the official calibrated score and close/update the evaluation
     if (isManager && dto.decision !== CalibrationDecision.PENDING) {
@@ -200,7 +207,7 @@ export class CalibrationsService {
       });
     }
 
-    return calibration;
+    return result;
   }
 
   // ── Calibration Config ────────────────────────────────────────────────────
