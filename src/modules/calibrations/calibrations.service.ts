@@ -52,13 +52,24 @@ export class CalibrationsService {
         calibrations: {
           include: { reviewer: { select: { id: true, name: true } } },
           orderBy: { createdAt: 'desc' },
-          take: 1,
         },
       },
     });
 
     return evaluations.map((ev) => {
-      const lastCalibration = ev.calibrations[0] ?? null;
+      // Manager's official calibration (submitted by the direct manager)
+      const managerCal = ev.calibrations.find((c) => c.reviewerId === ev.managerId) ?? null;
+      // All other reviewer proposals (non-manager participants)
+      const proposals = ev.calibrations
+        .filter((c) => c.reviewerId !== ev.managerId)
+        .map((c) => ({
+          reviewerId: c.reviewerId,
+          reviewerName: c.reviewer.name,
+          calibratedScore: c.calibratedScore,
+          comment: c.comment,
+          createdAt: c.createdAt,
+        }));
+
       return {
         evaluationId: ev.id,
         employee: ev.employee,
@@ -67,9 +78,10 @@ export class CalibrationsService {
         managerScore: ev.managerScore,
         finalScore: ev.finalScore,
         status: ev.status,
-        calibratedScore: lastCalibration?.calibratedScore ?? null,
-        calibrationDecision: lastCalibration?.decision ?? CalibrationDecision.PENDING,
-        calibrationComment: lastCalibration?.comment ?? null,
+        calibratedScore: managerCal?.calibratedScore ?? null,
+        calibrationDecision: managerCal?.decision ?? CalibrationDecision.PENDING,
+        calibrationComment: managerCal?.comment ?? null,
+        proposals,
       };
     });
   }
@@ -150,18 +162,32 @@ export class CalibrationsService {
   async submitCalibration(dto: SubmitCalibrationDto, reviewerId: string) {
     const tenantId = this.getTenantId();
 
-    const calibration = await this.prisma.calibration.create({
-      data: {
+    // Find the evaluation to know who the direct manager is
+    const evaluation = await this.prisma.evaluation.findUnique({
+      where: { id: dto.evaluationId },
+      select: { managerId: true },
+    });
+
+    const isManager = evaluation?.managerId === reviewerId;
+
+    const calibration = await this.prisma.calibration.upsert({
+      where: { evaluationId_reviewerId: { evaluationId: dto.evaluationId, reviewerId } },
+      create: {
         evaluationId: dto.evaluationId,
         reviewerId,
         calibratedScore: dto.calibratedScore,
         decision: dto.decision,
         comment: dto.comment,
       },
+      update: {
+        calibratedScore: dto.calibratedScore,
+        decision: dto.decision,
+        comment: dto.comment,
+      },
     });
 
-    // If agreed or adjusted, close the evaluation with the calibrated score
-    if (dto.decision !== CalibrationDecision.PENDING) {
+    // Only the direct manager can set the official calibrated score and close/update the evaluation
+    if (isManager && dto.decision !== CalibrationDecision.PENDING) {
       await this.prisma.evaluation.update({
         where: { id: dto.evaluationId },
         data: {

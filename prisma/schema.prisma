@@ -240,6 +240,8 @@ model Calibration {
 
   evaluation Evaluation @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
   reviewer   User       @relation("CalibrationReviewer", fields: [reviewerId], references: [id])
+
+  @@unique([evaluationId, reviewerId])
 }
 
 model CalibrationConfig {
