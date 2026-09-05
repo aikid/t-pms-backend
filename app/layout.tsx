@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://sara-performance.diego-jj17.chatgpt.site'),
   title: 'SARA Performance — Calibração de performance com IA',
   description:
-    'Plataforma de People Intelligence com calibração assíncrona, IA assistida e analytics para reduzir vieses, melhorar feedbacks e diminuir o custo dos ciclos de avaliação.',
+    'Plataforma de People Intelligence com calibração assíncrona, indicadores em tempo real, IA assistida e analytics para decisões de performance mais consistentes.',
   applicationName: 'SARA Performance',
   keywords: [
     'avaliação de performance',
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     siteName: 'SARA Performance',
     title: 'SARA Performance — Calibração de performance com IA',
     description:
-      'Calibração assíncrona, IA assistida e analytics para decisões de pessoas mais claras, consistentes e eficientes.',
+      'Calibração assíncrona, indicadores em tempo real, IA assistida e analytics para decisões de pessoas mais claras e consistentes.',
     images: [
       {
         url: '/og.png',
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'SARA Performance — Calibração de performance com IA',
     description:
-      'Calibração assíncrona, IA assistida e analytics para decisões de pessoas mais consistentes.',
+      'Calibração assíncrona, indicadores em tempo real e IA assistida para decisões de pessoas mais consistentes.',
     images: ['/og.png'],
   },
 };

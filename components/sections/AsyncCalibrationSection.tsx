@@ -6,7 +6,7 @@ import { SectionHeading } from '@/components/ui/SectionHeading';
 const benefits = [
   { icon: TimerReset, title: 'Menos reuniões', text: 'O fluxo avança sem depender de longos blocos simultâneos de agenda.' },
   { icon: FileCheck2, title: 'Mais rastreabilidade', text: 'Argumentos, evidências e ajustes permanecem organizados e documentados.' },
-  { icon: GitCompareArrows, title: 'Mais consistência', text: 'Critérios comuns ajudam a aproximar decisões entre áreas, níveis e salas.' },
+  { icon: GitCompareArrows, title: 'Visão em tempo real', text: 'Pendências, divergências e status ficam visíveis para RH e gestores.' },
   { icon: CircleDollarSign, title: 'Menor custo operacional', text: 'Menos horas indiretas de liderança, gestão e RH consumidas pelo ciclo.' },
 ];
 
@@ -20,8 +20,8 @@ export function AsyncCalibrationSection() {
             <SectionHeading
               id="calibration-title"
               eyebrow="O diferencial central"
-              title="Calibração assíncrona para reduzir semanas de discussão."
-              text="RH e gestores avançam em um fluxo estruturado e orientado por dados. As discussões deixam de depender exclusivamente de reuniões longas e se tornam mais objetivas, rastreáveis e eficientes."
+              title="Menos semanas de discussão. Mais clareza para RH e gestores."
+              text="A calibração assíncrona organiza salas, evidências e decisões em um fluxo data driven. As discussões deixam de depender exclusivamente de reuniões longas e se tornam mais objetivas, rastreáveis e eficientes."
               inverse
             />
             <aside className="impact-card">
@@ -38,11 +38,11 @@ export function AsyncCalibrationSection() {
             <div className="comparison-column traditional-flow">
               <div className="comparison-label"><span /> Calibração tradicional</div>
               <div className="traditional-track">
-                <div><small>SEMANA 01</small><strong>Consolidar planilhas</strong></div>
+                <div><small>SEMANA 01</small><strong>Consolidar dados espalhados</strong></div>
                 <ArrowRight size={15} aria-hidden="true" />
                 <div><small>SEMANA 02–03</small><strong>Encontrar agendas</strong></div>
                 <ArrowRight size={15} aria-hidden="true" />
-                <div><small>SEMANA 04+</small><strong>Reuniões e retrabalho</strong></div>
+                <div><small>SEMANA 04+</small><strong>Discussões sem rastreabilidade</strong></div>
               </div>
             </div>
             <div className="comparison-divider"><span>VS</span></div>
@@ -50,9 +50,9 @@ export function AsyncCalibrationSection() {
               <div className="comparison-label"><span /> Com SARA Performance</div>
               <div className="sara-track">
                 {[
-                  ['01', 'Evidências organizadas', 'Notas, comentários e critérios em um único fluxo.'],
-                  ['02', 'Análise assistida', 'Inconsistências e pontos de atenção sinalizados.'],
-                  ['03', 'Decisão documentada', 'Ajustes rastreáveis, com RH e liderança no controle.'],
+                  ['01', 'Salas organizadas', 'Pessoas, notas, comentários e critérios em um único fluxo.'],
+                  ['02', 'Indicadores em tempo real', 'Pendências, curvas e divergências sinalizadas.'],
+                  ['03', 'Decisão registrada', 'Ajustes rastreáveis e feedbacks melhor estruturados.'],
                 ].map(([number, title, text]) => (
                   <div className="sara-step" key={number}>
                     <span>{number}</span>

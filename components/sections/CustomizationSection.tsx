@@ -1,6 +1,7 @@
 import { Check, Palette, Shapes } from 'lucide-react';
 import { Reveal } from '@/components/ui/Reveal';
 import { SectionHeading } from '@/components/ui/SectionHeading';
+import { InlineThemeSelector } from '@/components/theme/InlineThemeSelector';
 
 const themes = [
   { name: 'Aurora', primary: '#163c69', accent: '#8ec5ff', surface: '#eaf4ff' },
@@ -16,13 +17,16 @@ export function CustomizationSection() {
           <div className="customization-heading-grid">
             <SectionHeading
               id="customization-title"
-              eyebrow="Produto camaleão"
-              title="A inteligência da SARA, com a cara da sua empresa."
-              text="Cores, logo e elementos visuais acompanham a identidade da contratante. A experiência fica mais familiar para colaboradores, gestores e RH."
+              eyebrow="Adaptabilidade"
+              title="Seu sistema com a sua cara."
+              text="Cores, logo e elementos visuais podem aproximar a SARA da identidade da contratante. A experiência fica mais familiar para colaboradores, gestores e RH, reduzindo a sensação de uso de uma ferramenta externa."
             />
             <div className="customization-note">
               <Palette size={19} strokeWidth={1.6} aria-hidden="true" />
-              <p><strong>Sua cultura. Sua identidade. Sua experiência.</strong> Um produto conectado ao ecossistema visual da organização.</p>
+              <div>
+                <p><strong>A inteligência continua sendo SARA.</strong> A identidade visual pode acompanhar o ecossistema da sua empresa.</p>
+                <InlineThemeSelector />
+              </div>
             </div>
           </div>
         </Reveal>
@@ -41,11 +45,11 @@ export function CustomizationSection() {
                   <div className="theme-bar"><i /><i /><i /><span>{theme.name}</span></div>
                   <div className="theme-interface">
                     <aside><b>S</b><i /><i /><i /></aside>
-                    <main>
+                    <div className="theme-content">
                       <div className="theme-title"><span /><small /></div>
                       <div className="theme-metrics"><i /><i /><i /></div>
                       <div className="theme-chart"><span /><span /><span /><span /><span /></div>
-                    </main>
+                    </div>
                   </div>
                 </div>
                 <div className="theme-meta">

@@ -21,7 +21,7 @@ export function EcosystemSection() {
               id="ecosystem-title"
               eyebrow="O próximo capítulo"
               title="Uma plataforma integrada de People Intelligence."
-              text="A SARA nasce com Performance, mas foi pensada para evoluir conectando avaliação, clima, remuneração, posições e analytics em uma experiência única, eficiente e inteligente."
+              text="A SARA nasce com Performance, mas foi pensada para evoluir conectando avaliação, clima, remuneração, posições e analytics em uma experiência única, eficiente e assistida por IA."
               inverse
             />
             <div className="roadmap-stamp"><Sparkles size={17} aria-hidden="true" /><span>Visão de plataforma<br /><strong>Ecossistema em evolução</strong></span></div>
@@ -44,7 +44,7 @@ export function EcosystemSection() {
           ))}
         </div>
         <Reveal>
-          <div className="ecosystem-note"><Boxes size={20} strokeWidth={1.5} aria-hidden="true" /><p>As soluções foram pensadas para conversar entre si, evitando silos, retrabalho e desconexão entre ferramentas.</p></div>
+          <div className="ecosystem-note"><Boxes size={20} strokeWidth={1.5} aria-hidden="true" /><p>As soluções da SARA foram pensadas para conversar entre si desde a origem. A visão é reduzir silos, retrabalho e desconexão entre ferramentas tradicionais de mercado.</p></div>
         </Reveal>
       </div>
     </section>

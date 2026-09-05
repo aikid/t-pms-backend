@@ -4,16 +4,19 @@ import { SectionHeading } from '@/components/ui/SectionHeading';
 
 const inputs = [
   { icon: CircleUserRound, label: 'Autoavaliação' },
-  { icon: UsersRound, label: 'Gestor e pares' },
+  { icon: UsersRound, label: 'Avaliação do gestor' },
+  { icon: UsersRound, label: 'Feedbacks de pares' },
   { icon: FileText, label: 'Comentários e evidências' },
-  { icon: Database, label: 'Cargo, nível e senioridade' },
+  { icon: Database, label: 'Matriz de senioridade' },
+  { icon: Database, label: 'Expectativas de cargo e nível' },
 ];
 
 const outputs = [
   'Recomendação de nota',
-  'Justificativa objetiva',
-  'Alertas de inconsistência',
-  'Pontos para revisão humana',
+  'Justificativa curta e orientada',
+  'Inconsistências e possíveis vieses',
+  'Apoio para RH e gestores',
+  'Base opcional para o feedback final',
 ];
 
 export function AIAssistedSection() {
@@ -25,7 +28,7 @@ export function AIAssistedSection() {
             id="ai-title"
             eyebrow="Inteligência assistiva"
             title="IA para apoiar decisões, não para substituir pessoas."
-            text="A SARA cruza notas, comentários, avaliações, evidências e expectativas por cargo e senioridade para sugerir caminhos e apoiar calibrações mais consistentes."
+            text="A IA atua dentro do processo: cruza autoavaliação, gestor, pares, evidências, matriz de senioridade e expectativas por cargo para recomendar caminhos e apoiar calibrações mais consistentes."
             align="center"
           />
         </Reveal>
@@ -47,7 +50,7 @@ export function AIAssistedSection() {
               <span className="flow-kicker">02 · Análise</span>
               <div className="ai-core-icon"><BrainCircuit size={30} strokeWidth={1.5} aria-hidden="true" /></div>
               <h3>Camada SARA</h3>
-              <p>Organiza evidências, compara critérios e sinaliza pontos de atenção.</p>
+              <p>Organiza, cruza e estrutura evidências para sinalizar inconsistências e possíveis vieses.</p>
               <div className="ai-status"><span /> Análise assistida</div>
             </div>
             <ArrowRight className="flow-arrow" size={23} aria-hidden="true" />
@@ -68,7 +71,7 @@ export function AIAssistedSection() {
             <div className="human-decision-icon"><ShieldCheck size={24} strokeWidth={1.6} aria-hidden="true" /></div>
             <div>
               <strong>A decisão permanece humana.</strong>
-              <p>A IA aumenta clareza, consistência e qualidade da análise. RH e liderança seguem responsáveis pela decisão final.</p>
+              <p>A IA da SARA não substitui RH e liderança. Ela organiza evidências, sinaliza inconsistências e recomenda caminhos para decisões mais consistentes.</p>
             </div>
             <Sparkles size={24} strokeWidth={1.4} aria-hidden="true" />
           </div>

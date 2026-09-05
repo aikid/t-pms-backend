@@ -10,16 +10,22 @@ import { EcosystemSection } from '@/components/sections/EcosystemSection';
 import { FeedbackQualitySection } from '@/components/sections/FeedbackQualitySection';
 import { HeroSection } from '@/components/sections/HeroSection';
 import { ProblemSection } from '@/components/sections/ProblemSection';
+import { ProductScreenshotShowcase } from '@/components/sections/ProductScreenshotShowcase';
+import { RealtimeIndicatorsSection } from '@/components/sections/RealtimeIndicatorsSection';
+import { ThemePersonalizationButton } from '@/components/theme/ThemePersonalizationButton';
 
 export default function Home() {
   return (
     <>
       <a className="skip-link" href="#conteudo">Pular para o conteúdo</a>
       <Header />
+      <ThemePersonalizationButton />
       <main id="conteudo">
         <HeroSection />
         <ProblemSection />
         <AsyncCalibrationSection />
+        <ProductScreenshotShowcase />
+        <RealtimeIndicatorsSection />
         <AIAssistedSection />
         <BiasReductionSection />
         <FeedbackQualitySection />
