@@ -52,7 +52,7 @@ export class CyclesController {
   }
 
   @Delete(':id')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.HR)
   remove(@Param('id') id: string) {
     return this.service.remove(id);
   }

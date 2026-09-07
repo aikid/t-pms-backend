@@ -1,4 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { TenantMiddleware } from './shared/middleware/tenant/tenant.middleware';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -14,6 +15,7 @@ import { SharedModule } from './shared/shared.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     SharedModule,
     DatabaseModule,
     UsersModule,

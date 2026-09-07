@@ -62,6 +62,8 @@ model User {
   feedbacksSent         Feedback[]    @relation("FeedbackFrom")
   feedbacksReceived     Feedback[]    @relation("FeedbackTo")
   roomParticipations    CalibrationRoomParticipant[]
+  peerEvaluationsGiven    PeerEvaluation[] @relation("PeerEvaluator")
+  peerEvaluationsReceived PeerEvaluation[] @relation("PeerEvaluatee")
 }
 
 enum Role {
@@ -96,6 +98,7 @@ model EvaluationCycle {
   scale            EvaluationScale[]
   calibrationConfig CalibrationConfig?
   calibrationRooms  CalibrationRoom[]
+  peerEvaluations   PeerEvaluation[]
 }
 
 enum TargetCycle {
@@ -139,7 +142,7 @@ model Evaluation {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  cycle        EvaluationCycle @relation(fields: [cycleId], references: [id])
+  cycle        EvaluationCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
   employee     User            @relation("EvaluationEmployee", fields: [employeeId], references: [id])
   manager      User            @relation("EvaluationManager", fields: [managerId], references: [id])
   answers      Answer[]
@@ -169,14 +172,16 @@ model Question {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  cycle   EvaluationCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
-  answers Answer[]
+  cycle      EvaluationCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  answers    Answer[]
+  peerAnswers PeerAnswer[]
 }
 
 enum QuestionRespondent {
   EMPLOYEE
   MANAGER
   BOTH
+  PEER
 }
 
 enum QuestionCategory {
@@ -319,4 +324,45 @@ model AuditLog {
   after     Json?
 
   createdAt DateTime @default(now())
+}
+
+model PeerEvaluation {
+  id          String              @id @default(uuid())
+  tenantId    String
+  cycleId     String
+  evaluatorId String
+  evaluateeId String
+  status      PeerEvaluationStatus @default(PENDING)
+  score       Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cycle     EvaluationCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  evaluator User            @relation("PeerEvaluator", fields: [evaluatorId], references: [id])
+  evaluatee User            @relation("PeerEvaluatee", fields: [evaluateeId], references: [id])
+  answers   PeerAnswer[]
+
+  @@unique([cycleId, evaluatorId, evaluateeId])
+}
+
+enum PeerEvaluationStatus {
+  PENDING
+  SUBMITTED
+}
+
+model PeerAnswer {
+  id               String  @id @default(uuid())
+  peerEvaluationId String
+  questionId       String
+  score            Float?
+  textAnswer       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  peerEvaluation PeerEvaluation @relation(fields: [peerEvaluationId], references: [id], onDelete: Cascade)
+  question       Question       @relation(fields: [questionId], references: [id])
+
+  @@unique([peerEvaluationId, questionId])
 }

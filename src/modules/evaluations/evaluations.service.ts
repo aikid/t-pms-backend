@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from 'src/infrastructure/database/prisma/prisma.service';
 import { tenantContext } from 'src/shared/context/tenant.context';
-import { AnswerType, EvaluationStatus } from '@prisma/client';
+import { AnswerType, CycleStatus, EvaluationStatus } from '@prisma/client';
 
 export class CreateEvaluationDto {
   cycleId: string;
@@ -181,5 +181,101 @@ export class EvaluationsService {
     const pending = total - selfDone;
 
     return { total, selfDone, managerDone, pending };
+  }
+
+  // ── Peer evaluations ──────────────────────────────────────────────────────
+
+  async findMyPeers(userId: string, cycleId?: string) {
+    const tenantId = this.getTenantId();
+
+    const cycle = cycleId
+      ? await this.prisma.evaluationCycle.findFirstOrThrow({ where: { id: cycleId, tenantId } })
+      : await this.prisma.evaluationCycle.findFirst({
+          where: { tenantId, status: CycleStatus.RUNNING },
+          orderBy: { createdAt: 'desc' },
+        });
+
+    if (!cycle) return [];
+
+    const me = await this.prisma.user.findFirstOrThrow({ where: { id: userId, tenantId } });
+    if (!me.managerId) return [];
+
+    const peers = await this.prisma.user.findMany({
+      where: { tenantId, managerId: me.managerId, id: { not: userId } },
+      select: { id: true, name: true, position: true, area: true },
+    });
+
+    if (peers.length === 0) return [];
+
+    // Ensure a PeerEvaluation record exists for each peer in this cycle
+    await this.prisma.$transaction(
+      peers.map((p) =>
+        this.prisma.peerEvaluation.upsert({
+          where: {
+            cycleId_evaluatorId_evaluateeId: {
+              cycleId: cycle.id,
+              evaluatorId: userId,
+              evaluateeId: p.id,
+            },
+          },
+          create: { tenantId, cycleId: cycle.id, evaluatorId: userId, evaluateeId: p.id },
+          update: {},
+        }),
+      ),
+    );
+
+    return this.prisma.peerEvaluation.findMany({
+      where: { tenantId, cycleId: cycle.id, evaluatorId: userId },
+      include: {
+        evaluatee: { select: { id: true, name: true, position: true, area: true } },
+        answers: { include: { question: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async submitPeerAnswers(
+    peerEvaluationId: string,
+    answers: { questionId: string; score: number; textAnswer?: string }[],
+    userId: string,
+  ) {
+    const tenantId = this.getTenantId();
+    const peerEvaluation = await this.prisma.peerEvaluation.findFirstOrThrow({
+      where: { id: peerEvaluationId, tenantId },
+    });
+
+    if (peerEvaluation.evaluatorId !== userId) {
+      throw new ForbiddenException('Sem permissão para responder esta avaliação de pares');
+    }
+
+    const ops = answers.map((a) =>
+      this.prisma.peerAnswer.upsert({
+        where: {
+          peerEvaluationId_questionId: {
+            peerEvaluationId,
+            questionId: a.questionId,
+          },
+        },
+        create: {
+          peerEvaluationId,
+          questionId: a.questionId,
+          score: a.score,
+          textAnswer: a.textAnswer,
+        },
+        update: {
+          score: a.score,
+          textAnswer: a.textAnswer,
+        },
+      }),
+    );
+
+    await this.prisma.$transaction(ops);
+
+    const avgScore = answers.length > 0 ? answers.reduce((sum, a) => sum + (a.score ?? 0), 0) / answers.length : null;
+
+    return this.prisma.peerEvaluation.update({
+      where: { id: peerEvaluationId },
+      data: { score: avgScore, status: 'SUBMITTED' },
+    });
   }
 }

@@ -119,7 +119,10 @@ export class CyclesService {
 
   async remove(id: string) {
     const tenantId = this.getTenantId();
-    return this.prisma.evaluationCycle.delete({ where: { id } });
+    // deleteMany scopes by tenantId too, preventing cross-tenant deletion; cascade
+    // rules on Evaluation/Question/EvaluationScale/Calibration*/PeerEvaluation take
+    // care of removing everything related to this cycle.
+    await this.prisma.evaluationCycle.deleteMany({ where: { id, tenantId } });
   }
 
   // ── Questions ────────────────────────────────────────────
@@ -175,15 +178,20 @@ export class CyclesService {
       where: { id: cycleId, tenantId },
     });
 
-    if (cycle.status !== CycleStatus.DRAFT) {
-      throw new BadRequestException('Apenas ciclos em rascunho podem ser publicados');
+    // Allow re-running on an already RUNNING cycle to backfill evaluations for
+    // employees who became eligible after launch (e.g. a manager promoted later).
+    if (cycle.status !== CycleStatus.DRAFT && cycle.status !== CycleStatus.RUNNING) {
+      throw new BadRequestException('Apenas ciclos em rascunho ou em andamento podem gerar avaliações');
     }
 
     // Determine which employees to include
     const employees = await this.prisma.user.findMany({
       where: {
         tenantId,
-        role: { not: 'ADMIN' },
+        // Eligibility is driven by isManager, not role: today some ADMINs also manage a
+        // team (test data) and must self-evaluate; once ADMINs are pure system observers
+        // with isManager=false, this OR naturally excludes them without further changes.
+        OR: [{ role: { not: 'ADMIN' } }, { isManager: true }],
         // MANAGERS target: only users that are managers
         ...(cycle.target === 'MANAGERS' ? { isManager: true } : {}),
       },
@@ -221,6 +229,6 @@ export class CyclesService {
       ),
     ]);
 
-    return this.findOne(cycleId);
+    return this.prisma.evaluationCycle.findFirstOrThrow({ where: { id: cycleId } });
   }
 }

@@ -66,4 +66,20 @@ export class EvaluationsController {
     const isAdmin = user.isSuperAdmin || user.role === 'ADMIN';
     return this.service.submitAnswers(id, body.answers, user.userId, isAdmin);
   }
+
+  // ── Peer evaluations (colleagues sharing the same manager) ──────────────
+
+  @Get('peers/mine')
+  findMyPeers(@CurrentUser() user: { userId: string }, @Query('cycleId') cycleId?: string) {
+    return this.service.findMyPeers(user.userId, cycleId);
+  }
+
+  @Post('peers/:id/answers')
+  submitPeerAnswers(
+    @Param('id') id: string,
+    @Body() body: { answers: { questionId: string; score: number; textAnswer?: string }[] },
+    @CurrentUser() user: { userId: string },
+  ) {
+    return this.service.submitPeerAnswers(id, body.answers, user.userId);
+  }
 }
