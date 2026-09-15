@@ -139,12 +139,24 @@ export class EvaluationsService {
     const avgScore =
       answers.reduce((sum, a) => sum + (a.score ?? 0), 0) / answers.length;
 
-    // Advance status
+    // Advance status based on which answer types actually exist, not the order
+    // submissions arrived in (self and manager reviews can be sent in any order).
     let nextStatus = evaluation.status;
-    if (isSelf && evaluation.status === EvaluationStatus.PENDING_SELF_REVIEW) {
-      nextStatus = EvaluationStatus.PENDING_MANAGER_REVIEW;
-    } else if (!isSelf && evaluation.status === EvaluationStatus.PENDING_MANAGER_REVIEW) {
-      nextStatus = EvaluationStatus.AWAITING_CALIBRATION;
+    if (
+      evaluation.status === EvaluationStatus.PENDING_SELF_REVIEW ||
+      evaluation.status === EvaluationStatus.PENDING_MANAGER_REVIEW
+    ) {
+      const [selfCount, managerCount] = await Promise.all([
+        this.prisma.answer.count({ where: { evaluationId, type: AnswerType.SELF } }),
+        this.prisma.answer.count({ where: { evaluationId, type: AnswerType.MANAGER } }),
+      ]);
+      if (selfCount > 0 && managerCount > 0) {
+        nextStatus = EvaluationStatus.AWAITING_CALIBRATION;
+      } else if (selfCount > 0) {
+        nextStatus = EvaluationStatus.PENDING_MANAGER_REVIEW;
+      } else {
+        nextStatus = EvaluationStatus.PENDING_SELF_REVIEW;
+      }
     }
 
     return this.prisma.evaluation.update({
